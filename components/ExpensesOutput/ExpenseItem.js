@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { getTheme } from '../../constants/styles';
 import { getFormattedDate } from '../../util/date';
 import { useTheme } from '../../store/theme-context';
- 
+
 function ExpenseItem({ id, description, rating, date, workouts = [], theme }) {
   const navigation = useNavigation();
   const { theme: contextTheme } = useTheme();

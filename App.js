@@ -11,6 +11,7 @@ import ManageExpense from './screens/ManageExpense';
 import RecentExpenses from './screens/RecentExpenses';
 import AllExpenses from './screens/AllExpenses';
 import CustomCalendar from './screens/CustomCalendar';
+import EditExpenseScreen from './screens/EditExpenseScreen';
 import Profile from './screens/Profile';
 import ExpenseDetail from './screens/ExpenseDetail';
 import BindingVow from './screens/BindingVow';
@@ -189,6 +190,11 @@ function AuthenticatedStack() {
         name="ExpenseDetail"
         component={ExpenseDetail}
         options={{ title: 'Expense Details' }}
+      />
+      <Stack.Screen
+        name="EditExpenseScreen"
+        component={EditExpenseScreen}
+        options={{ title: 'Edit Expense' }}
       />
       <Stack.Screen
         name="BindingVowForm"
