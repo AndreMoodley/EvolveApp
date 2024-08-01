@@ -30,7 +30,7 @@ import { GlobalStyles, getTheme } from './constants/styles';
 const Stack = createNativeStackNavigator();
 const BottomTabs = createBottomTabNavigator();
 
-SplashScreen.preventAutoHideAsync(); // Prevent the splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
 
 function AuthStack() {
   const { theme } = useTheme();
@@ -43,8 +43,8 @@ function AuthStack() {
         contentStyle: { backgroundColor: GlobalStyles.dark.background },
       }}
     >
-      <Stack.Screen name="Login" component={LoginScreen} theme={theme}/>
-      <Stack.Screen name="Signup" component={SignupScreen} theme={theme}/>
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
     </Stack.Navigator>
   );
 }
@@ -60,33 +60,32 @@ function ExpensesOverview() {
         headerStyle: { backgroundColor: currentTheme.primary },
         headerTintColor: currentTheme.textPrimary,
         tabBarStyle: { backgroundColor: currentTheme.primary },
-        tabBarActiveTintColor: currentTheme.accent, 
+        tabBarActiveTintColor: currentTheme.accent,
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="add"
             size={24}
             color={tintColor}
             onPress={() => {
-              navigation.navigate('ManageExpense', { 
-                expenseId: null, 
-                description: '', 
-                rating: 0, 
-                date: new Date().toISOString(), 
-                workouts: [], 
-                theme 
+              navigation.navigate('ManageExpense', {
+                expenseId: null,
+                description: '',
+                rating: 0,
+                date: new Date().toISOString(),
+                workouts: [],
+                theme,
               });
             }}
             theme={theme}
           />
         ),
-        
       })}
     >
       <BottomTabs.Screen
         name="RecentExpenses"
         options={{
           title: 'Recent Expenses',
-          tabBarLabel: 'Recent', 
+          tabBarLabel: 'Recent',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="hourglass" size={size} color={color} />
           ),
@@ -98,7 +97,7 @@ function ExpensesOverview() {
         name="Progressions"
         options={{
           title: 'Progressions',
-          tabBarLabel: 'Progressions', 
+          tabBarLabel: 'Progressions',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="infinite-outline" size={size} color={color} />
           ),
@@ -110,7 +109,7 @@ function ExpensesOverview() {
         name="BindingVow"
         options={{
           title: 'Binding Vow',
-          tabBarLabel: 'Binding Vow', 
+          tabBarLabel: 'Binding Vow',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="diamond-outline" size={size} color={color} />
           ),
@@ -122,7 +121,7 @@ function ExpensesOverview() {
         name="Calendar"
         options={{
           title: 'Calendar',
-          tabBarLabel: 'Calendar', 
+          tabBarLabel: 'Calendar',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" size={size} color={color} />
           ),
@@ -155,7 +154,6 @@ function ExpensesOverview() {
 }
 
 function AuthenticatedStack() {
-  const authCtx = useContext(AuthContext);
   return (
     <Stack.Navigator
       screenOptions={{
@@ -220,18 +218,35 @@ function Navigation() {
     </NavigationContainer>
   );
 }
-
 function Root() {
   const [isTryingLogin, setIsTryingLogin] = useState(true);
-
   const authCtx = useContext(AuthContext);
 
   useEffect(() => {
     async function fetchToken() {
       const storedToken = await AsyncStorage.getItem('token');
+      const storedUserId = await AsyncStorage.getItem('userId');
+      const storedExpirationDate = await AsyncStorage.getItem('tokenExpiration');
 
-      if (storedToken) {
-        authCtx.authenticate(storedToken);
+      if (storedToken && storedUserId && storedExpirationDate) {
+        const expirationDate = new Date(storedExpirationDate);
+        const remainingTime = expirationDate.getTime() - new Date().getTime();
+
+        if (remainingTime <= 60000) {
+          // Less than 1 minute, refresh token
+          try {
+            const newToken = await fetchNewToken();
+            authCtx.authenticate(newToken, storedUserId);
+          } catch (error) {
+            console.error('Error refreshing token:', error);
+            authCtx.logout();
+          }
+        } else {
+          authCtx.authenticate(storedToken, storedUserId);
+          setTimeout(authCtx.logout, remainingTime); // Auto-logout after token expires
+        }
+      } else {
+        authCtx.logout();
       }
 
       setIsTryingLogin(false);
@@ -248,20 +263,20 @@ function Root() {
   return <Navigation />;
 }
 
+
 export default function App() {
   return (
     <>
       <StatusBar style="dark" />
-        <ThemeProvider>
-      <AuthContextProvider>
+      <ThemeProvider>
+        <AuthContextProvider>
           <ExpensesContextProvider>
             <CalendarContextProvider>
               <Root />
             </CalendarContextProvider>
           </ExpensesContextProvider>
-      </AuthContextProvider>
-        </ThemeProvider>
+        </AuthContextProvider>
+      </ThemeProvider>
     </>
   );
 }
- 

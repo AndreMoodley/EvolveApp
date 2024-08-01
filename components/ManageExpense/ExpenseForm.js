@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { getFormattedDate } from '../../util/date';
 import { useTheme } from '../../store/theme-context';
 import { getTheme } from '../../constants/styles';
 import { fetchWorkouts } from '../../util/http';
+import { AuthContext } from '../../store/auth-context';
 
 function ExpenseForm({ submitButtonLabel, onSubmit, onCancel, defaultValues }) {
   const { theme } = useTheme();
   const currentTheme = getTheme(theme);
+  const authCtx = useContext(AuthContext);
+
   const [inputs, setInputs] = useState({
     rating: defaultValues ? defaultValues.rating?.toString() : '',
     date: defaultValues ? new Date(defaultValues.date) : new Date(),
@@ -20,11 +23,11 @@ function ExpenseForm({ submitButtonLabel, onSubmit, onCancel, defaultValues }) {
 
   useEffect(() => {
     if (defaultValues && defaultValues.id) {
-      fetchWorkouts(defaultValues.id).then(fetchedWorkouts => {
+      fetchWorkouts(defaultValues.id, authCtx.token, authCtx.userId).then(fetchedWorkouts => {
         setWorkouts(fetchedWorkouts);
       });
     }
-  }, [defaultValues]);
+  }, [defaultValues, authCtx.token, authCtx.userId]);
 
   const startOfWeek = new Date();
   startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
@@ -46,15 +49,18 @@ function ExpenseForm({ submitButtonLabel, onSubmit, onCancel, defaultValues }) {
       Alert.alert('Invalid input', 'Rating must be a number between -1000 and 1000.');
       return;
     }
-
+  
     const expenseData = {
       rating,
       date: inputs.date instanceof Date ? inputs.date.toISOString() : new Date(inputs.date).toISOString(),
-      description: inputs.description
+      description: inputs.description,
+      userId: authCtx.userId // Ensure userId is included in the expense data
     };
-
-    onSubmit(expenseData, workouts);
+  
+    // Pass workouts along with the expense data
+    onSubmit(expenseData, workouts, authCtx.token);
   }
+  
 
   const showDatePicker = () => {
     setDatePickerVisibility(true);
@@ -73,7 +79,7 @@ function ExpenseForm({ submitButtonLabel, onSubmit, onCancel, defaultValues }) {
     setWorkouts((currentWorkouts) => [
       ...currentWorkouts,
       { id: Date.now().toString(), name: '', reps: '', rpe: '', sets: [] },
-    ]); 
+    ]);
   };
 
   const workoutChangedHandler = (index, field, value) => {
@@ -267,4 +273,3 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
- 

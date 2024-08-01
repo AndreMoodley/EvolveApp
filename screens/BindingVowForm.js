@@ -5,6 +5,7 @@ import { useTheme } from '../store/theme-context';
 import { getTheme } from '../constants/styles';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import moment from 'moment';
+import { AuthContext } from '../store/auth-context'; // Add AuthContext
 
 function BindingVowForm({ navigation }) {
   const { theme } = useTheme();
@@ -14,6 +15,7 @@ function BindingVowForm({ navigation }) {
   const [date, setDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const calendarCtx = useContext(CalendarContext);
+  const authCtx = useContext(AuthContext); // Add auth context
 
   const handleDateConfirm = (selectedDate) => {
     setDate(selectedDate);
@@ -25,7 +27,7 @@ function BindingVowForm({ navigation }) {
       Alert.alert('Invalid input', 'Please fill in all fields and select a valid date.');
       return;
     }
- 
+
     const currentDate = new Date();
     const selectedDate = new Date(date);
 
@@ -55,7 +57,7 @@ function BindingVowForm({ navigation }) {
       type,
     };
 
-    await calendarCtx.addVow(vow);
+    await calendarCtx.addVow(vow, authCtx.token, authCtx.userId); // Pass token and userId
     navigation.goBack();
   };
 

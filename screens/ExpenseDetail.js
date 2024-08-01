@@ -19,6 +19,17 @@ function ExpenseDetail({ route }) {
     { title: 'Expense Details', data: [expense] },
     { title: 'Workouts', data: expense.workouts || [] }, // Ensure workouts is an array
   ];
+  function navigateToEdit() {
+    navigation.navigate('ManageExpense', {
+      expenseId: expense.id,
+      description: expense.description,
+      rating: expense.rating,
+      date: expense.date,
+      workouts: expense.workouts
+    });
+  }
+
+  
 
   function confirmDeleteHandler() {
     Alert.alert(
@@ -80,15 +91,21 @@ function ExpenseDetail({ route }) {
           <Text style={[styles.sectionHeader, { color: currentTheme.textPrimary }]}>{title}</Text>
         )}
         contentContainerStyle={styles.listContainer}
-      />
+      /> 
       <View style={styles.deleteContainer}>
         <IconButton
           icon="trash"
           color={currentTheme.error}
-          size={36}
+          size={50}
           onPress={confirmDeleteHandler}
         />
-      </View>
+        <IconButton
+          icon="pencil"
+          color={currentTheme.error}
+          size={50}
+          onPress={navigateToEdit}
+        />
+      </View> 
     </View>
   );
 }
@@ -102,7 +119,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-  },
+  }, 
   detailContainer: {
     padding: 10,
     borderRadius: 5,
@@ -126,10 +143,19 @@ const styles = StyleSheet.create({
   setText: {
     fontSize: 14,
   },
-  deleteContainer: {
+  deleteContainer: { 
+    flex: 1,
+    marginHorizontal: 18,
+    padding: 12,
+    borderRadius: 6,
+    justifyContent: 'center', 
+    paddingTop: 8,  
+    justifyContent: 'space-between',
+    flexDirection: 'row', 
+  },
+  editContainer: {
     marginTop: 16,
-    marginBottom: 80,
-    paddingTop: 8, 
+    paddingTop: 8,
     alignItems: 'center',
   },
 });

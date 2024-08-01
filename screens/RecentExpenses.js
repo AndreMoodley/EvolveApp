@@ -7,6 +7,7 @@ import ErrorOverlay from '../components/UI/ErrorOverlay';
 import { useTheme } from '../store/theme-context';
 import { getTheme } from '../constants/styles';
 import { fetchExpenses, fetchWorkouts } from '../util/http';
+import { AuthContext } from '../store/auth-context';
 
 function RecentExpenses() {
   const expensesCtx = useContext(ExpensesContext);
@@ -15,18 +16,20 @@ function RecentExpenses() {
 
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState();
+  const authCtx = useContext(AuthContext);
+  const token = authCtx.token;
+  const userId = authCtx.userId;
 
   useEffect(() => {
     async function getExpenses() {
       setIsFetching(true);
       try {
-        const expenses = await fetchExpenses();
+        const expenses = await fetchExpenses(token, userId);
         const expensesWithWorkouts = await Promise.all(expenses.map(async (expense) => {
-          const workouts = await fetchWorkouts(expense.id);
-          return { ...expense, workouts: workouts || [] }; // Ensure workouts is an array
+          const workouts = await fetchWorkouts(expense.id, token, userId);
+          return { ...expense, workouts: workouts || [] };
         }));
-        console.log('Fetched expenses in component:', expensesWithWorkouts);
-        expensesCtx.setExpenses(expensesWithWorkouts); 
+        expensesCtx.setExpenses(expensesWithWorkouts);
       } catch (error) {
         setError(error.message);
       }
@@ -34,11 +37,8 @@ function RecentExpenses() {
     }
 
     getExpenses();
-  }, []);
+  }, [token, userId]);
 
-  if (error && !isFetching) {
-    return <ErrorOverlay message={error} />;
-  }
 
   if (isFetching) {
     return <LoadingOverlay />;

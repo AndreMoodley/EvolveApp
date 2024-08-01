@@ -3,13 +3,16 @@ import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import IconButton from '../components/UI/IconButton';
 import { ExpensesContext } from '../store/expenses-context';
 import ExpenseForm from '../components/ManageExpense/ExpenseForm';
-import { updateExpense, deleteExpense, storeWorkout, updateWorkout, fetchWorkouts } from '../util/http';
+import { updateExpense, deleteExpense, storeWorkout, updateWorkout, fetchWorkouts, storeExpense } from '../util/http';
 import { useTheme } from '../store/theme-context';
 import { getTheme } from '../constants/styles';
+import { AuthContext } from '../store/auth-context';
 
 function ManageExpense({ route, navigation }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [workouts, setWorkouts] = useState([]);
   const expensesCtx = useContext(ExpensesContext);
+  const authCtx = useContext(AuthContext);
   const { theme } = useTheme();
   const currentTheme = getTheme(theme);
 
@@ -20,30 +23,29 @@ function ManageExpense({ route, navigation }) {
     (expense) => expense.id === editedExpenseId
   );
 
-  const [workouts, setWorkouts] = useState([]);
-
   useEffect(() => {
     if (isEditing) {
-      fetchWorkouts(editedExpenseId).then(fetchedWorkouts => {
+      fetchWorkouts(editedExpenseId, authCtx.token, authCtx.userId).then(fetchedWorkouts => {
         setWorkouts(fetchedWorkouts);
       });
     }
-  }, [isEditing]);
+  }, [isEditing, editedExpenseId, authCtx.token, authCtx.userId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       title: isEditing ? 'Edit Expense' : 'Add Expense',
     });
   }, [navigation, isEditing]);
- 
+
   async function deleteExpenseHandler() {
     setIsSubmitting(true);
     try {
-      await deleteExpense(editedExpenseId);
+      await deleteExpense(editedExpenseId, authCtx.token, authCtx.userId);
       expensesCtx.deleteExpense(editedExpenseId);
       navigation.goBack();
     } catch (error) {
       setIsSubmitting(false);
+      console.error('Error deleting expense:', error);
     }
   }
 
@@ -51,24 +53,29 @@ function ManageExpense({ route, navigation }) {
     navigation.goBack();
   }
 
-  async function confirmHandler(expenseData, updatedWorkouts) {
-    if (isSubmitting) return; // Prevent multiple submissions
+  async function confirmHandler(expenseData, updatedWorkouts, token, userId) {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       if (isEditing) {
-        await updateExpense(editedExpenseId, expenseData);
+        await updateExpense(editedExpenseId, expenseData, token, userId);
         expensesCtx.updateExpense(editedExpenseId, expenseData);
-
+  
         for (const workout of updatedWorkouts) {
           if (workout.id) {
-            await updateWorkout(editedExpenseId, workout.id, workout);
+            await updateWorkout(editedExpenseId, workout.id, workout, token, userId);
           } else {
-            await storeWorkout(editedExpenseId, workout);
+            await storeWorkout(editedExpenseId, workout, token, userId);
           }
         }
       } else {
-        const id = await expensesCtx.addExpense(expenseData, updatedWorkouts);
-        console.log('Stored expense with ID:', id);
+        const id = await storeExpense(expenseData, token, userId);
+        expensesCtx.addExpense({ ...expenseData, id });
+  
+        // Store workouts
+        for (const workout of updatedWorkouts) {
+          await storeWorkout(id, workout, token, userId);
+        }
       }
       navigation.goBack();
     } catch (error) {
@@ -76,6 +83,7 @@ function ManageExpense({ route, navigation }) {
       console.error('Error in confirmHandler:', error);
     }
   }
+  
 
   if (isSubmitting) {
     return (
@@ -89,7 +97,7 @@ function ManageExpense({ route, navigation }) {
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <ExpenseForm
         submitButtonLabel={isEditing ? 'Update' : 'Add'}
-        onSubmit={confirmHandler}
+        onSubmit={(expenseData, updatedWorkouts) => confirmHandler(expenseData, updatedWorkouts, authCtx.token, authCtx.userId)}
         onCancel={cancelHandler}
         defaultValues={selectedExpense}
       />
